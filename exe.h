@@ -1,6 +1,7 @@
 #ifndef _EXE_H
 #define _EXE_H
 
+#include <unistd.h>
 #include <cstdint>
 
 typedef struct{
@@ -10,11 +11,11 @@ typedef struct{
 #define EXE_STDOUT  (0x02)
 #define EXE_STDERR  (0x04)
 #define EXE_EXIT    (0x80)
-    uint8_t flags;
+    uint32_t flags;
 
-    int mstdin;
-    int mstdout;
-    int mstderr;
+    // int mstdin;
+    // int mstdout;
+    // int mstderr;
     pid_t pid;
 } m_exe_options;
 
@@ -27,6 +28,12 @@ extern int exe_wait_exit( m_exe_options *iopt );
  * -1 isStop or not exist
  * */
 extern int exe_isrunning( m_exe_options *iopt );
+
+extern int exe_set_read_noblock( m_exe_options *opt );
+extern int exe_read_stdout( m_exe_options *opt, char *rbuf, int rsize  );
+extern int exe_read_stderr( m_exe_options *opt, char *rbuf, int rsize  );
+extern int exe_write_stdin( m_exe_options *opt, char *wbuf, int wsize  );
+
 extern int exe_parse_cmd( m_exe_options *opt );
 extern void exe_show_opts( m_exe_options *opt );
 

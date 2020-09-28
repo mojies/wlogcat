@@ -1,5 +1,10 @@
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 
-int str_split( char *dest[], int destnum, const char *src, char *dim ){
+#include "Debug.h"
+
+int str_split( const char *dest[], int destnum, const char *src, char dim ){
     const char *start;
     const char *movep;
     int count = 0;
@@ -28,10 +33,10 @@ int str_split( char *dest[], int destnum, const char *src, char *dim ){
     return count;
 }
 
-extern int str_split_free( char *dest[], int destnum ){
+extern int str_split_free( const char *dest[], int destnum ){
     for( int i = 0; i < destnum; i++ ){
-        free( dest[i] );
+        free( (void*)dest[i] );
     }
-    retur 0;
+    return 0;
 }
 

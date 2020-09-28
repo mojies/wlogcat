@@ -35,7 +35,7 @@ typedef struct{
 
 // =============================================================================
 static int lf_get_pids_via_packages( int pids[], int pids_size,
-        const char packages );
+        const char *packages );
 
 long long send_SSDP_M_SEARCH_request( int testTimes );
 void listen_SSDP_PORT( void );
@@ -107,7 +107,7 @@ int gv_pidnums = 0;
 
 // =============================================================================
 int main( int argc, char *argv[] ){
-    DLLOGD("Hello world!");
+    // DLLOGD("Hello world!");
 
     if( param_get( argc, argv, (m_params*)&gv_params, sizeof( m_inputparams )/sizeof( m_params ) ) ){
         param_show_helps( (m_params*)&gv_params, sizeof( m_inputparams )/sizeof( m_params ) );
@@ -115,9 +115,10 @@ int main( int argc, char *argv[] ){
     }
 
     if( gv_params.serial.data.astr ){
-        snprintf( gv_adbexe, sizeof gv_adbexe, "adb -s %s", gv_params.serial.data.astr );
+        snprintf( gv_adbexe, sizeof gv_adbexe,
+                "adb -s %s", gv_params.serial.data.astr );
     }else{
-        strcpy( gv_adbexe, "adb" )'
+        strcpy( gv_adbexe, "adb" );
         DLLOGD( "Using default adb devices" );
     }
 
@@ -132,17 +133,21 @@ int main( int argc, char *argv[] ){
 
     }else if( gv_params.packages.data.astr ){
 
-        gv_pdnums = lf_get_pids_via_packages( gv_pios, MAX_MARCH_PIDS,
+        gv_pidnums = lf_get_pids_via_packages( gv_pids, MAX_MARCH_PIDS,
                 gv_params.packages.data.astr );
 
+    }else{
+        param_show_helps( (m_params*)&gv_params, sizeof( m_inputparams )/sizeof( m_params ) );
+        return -1;
     }
 
-    while( 1 ){
+    // while( 1 ){
+        locat_get_log();
         // run adb logcat to cache the log
         // save the whole logs
         // filter the target
         // print last ms log
-    }
+    // }
 
     /*
     {
@@ -162,6 +167,7 @@ int main( int argc, char *argv[] ){
     }
     */
 
+    /*
     m_exe_options *tp_opt = exe_alloc();
     tp_opt->cmd = "sleep 10";
     tp_opt->flags = EXE_STDOUT | EXE_STDERR | EXE_STDIN;
@@ -177,6 +183,7 @@ int main( int argc, char *argv[] ){
         }
         usleep( 100000 );
     }
+    */
 
     /*
     // while( !(tp_opt->flags & EXE_EXIT) ){
@@ -199,8 +206,8 @@ int main( int argc, char *argv[] ){
     */
 
 
-    exe_alloc_free( tp_opt );
-    DLLOGD( "" );
+    // exe_alloc_free( tp_opt );
+    // DLLOGD( "" );
 
 
     return 0;
@@ -208,7 +215,7 @@ int main( int argc, char *argv[] ){
 
 
 static int lf_get_pids_via_packages( int pids[], int pids_size,
-        const char packages  ){
+        const char *packages  ){
 
     m_proc_info *tp_pkg_pids;
 
@@ -220,7 +227,7 @@ static int lf_get_pids_via_packages( int pids[], int pids_size,
     int i;
 
 
-    tv_split_pkgnum = split( tp_pkgs, 32, packages, ',' );
+    tv_split_pkgnum = str_split( tp_pkgs, 32, packages, ',' );
     if( tv_split_pkgnum == 0 ){
         tp_pkgs[0] = packages;
         tv_pkgnums = 1;
@@ -231,7 +238,7 @@ static int lf_get_pids_via_packages( int pids[], int pids_size,
     for( i = 0; i < tv_pkgnums; i++ ){
         int tv_nums = get_process_info( tp_pkgs[ i ], &tp_pkg_pids );
         if( tv_nums > 0 ){
-            for( int j == 0; j < tv_nums; j++ ){
+            for( int j = 0; j < tv_nums; j++ ){
                 pids[ tv_pidnums ] = tp_pkg_pids[j].pid;
                 tv_pidnums++;
                 if( tv_pidnums == pids_size ) break;

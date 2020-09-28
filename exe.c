@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 
@@ -14,11 +15,11 @@ typedef unsigned char uint8_t;
 typedef struct{
     const char *cmd;
 
-    uint8_t flags;
+    uint32_t flags;
 
-    int mstdin;
-    int mstdout;
-    int mstderr;
+    // int mstdin;
+    // int mstdout;
+    // int mstderr;
     pid_t pid;
 
     char *executor;
@@ -40,9 +41,9 @@ static int lf_strndup_args( m_inner_options *opt, bool need_translate,
 
 m_exe_options *exe_alloc( void ){
     m_inner_options *p = (m_inner_options*)calloc( sizeof( m_inner_options ), 1 );
-    p->mstdin = -1;
-    p->mstdout = -1;
-    p->mstderr = -1;
+    // p->mstdin = -1;
+    // p->mstdout = -1;
+    // p->mstderr = -1;
 
     return (m_exe_options*)p;
 }
@@ -142,15 +143,15 @@ int exe_run( m_exe_options *iopt ){
 
     if( tp_opt->flags & EXE_STDIN ){
         close( tp_opt->fd_stdin[0] );
-        tp_opt->mstdin = tp_opt->fd_stdin[1];
+        // tp_opt->mstdin = tp_opt->fd_stdin[1];
     }
     if( tp_opt->flags & EXE_STDOUT ){
         close( tp_opt->fd_stdout[1] );
-        tp_opt->mstdout = tp_opt->fd_stdout[0];
+        // tp_opt->mstdout = tp_opt->fd_stdout[0];
     }
     if( tp_opt->flags & EXE_STDERR ){
         close( tp_opt->fd_stderr[1] );
-        tp_opt->mstderr = tp_opt->fd_stderr[0];
+        // tp_opt->mstderr = tp_opt->fd_stderr[0];
     }
     return 0;
 }
@@ -223,26 +224,22 @@ int exe_parse_cmd( m_exe_options *opt ){
             if( (c == 0x20) || (c == 0x09) || ( c == '\0' ) ){
                 if( ( tv_status & ( EXE_PARSE_START_WITH_34 |
                                 EXE_PARSE_START_WITH_39 ) ) ){
-                    str_start--;
-                    tv_status &= ~( EXE_PARSE_START_WITH_34 |
-                            EXE_PARSE_START_WITH_39 );
+                    if( c == '\0' ){
+                        str_start--;
+                        tv_status &= ~( EXE_PARSE_START_WITH_34 |
+                                EXE_PARSE_START_WITH_39 );
+                    }else{
+                        goto GT_PARSE_LOOP_UNDER;
+                    }
                 }
 
-                // if( tv_status & EXE_PARSE_GOT_FILE ){
+                if(  c != *str_start ){
                     if( lf_strndup_args( tp_opt, false, str_start, p ) < 0 ){
                         // TODO
                         return -1;
                     }
-
-                // }else{
-                //     tp_opt->executor = strndup( str_start,
-                //             p - str_start );
-                //     if( tp_opt->executor == NULL ){
-                //         // TODO
-                //     }
-                //     tv_status |= EXE_PARSE_GOT_FILE;
-                //     // file
-                // }
+                    str_start = p+1;
+                }
                 tv_status &= ~EXE_PARSE_ONFOCUS;
                 tv_status |= EXE_PARSE_IDLE;
                     // end
@@ -255,6 +252,7 @@ int exe_parse_cmd( m_exe_options *opt ){
                         // TODO
                         return -1;
                     }
+                    str_start = p+1;
 
                     tv_status &= ~( EXE_PARSE_START_WITH_39 |
                             EXE_PARSE_ONFOCUS );
@@ -271,6 +269,7 @@ int exe_parse_cmd( m_exe_options *opt ){
 
                     tv_status &= ~( EXE_PARSE_START_WITH_34 |
                             EXE_PARSE_ONFOCUS );
+                    str_start = p+1;
                 }else{
                     goto GT_PARSE_LOOP_UNDER;
                 }
@@ -305,13 +304,6 @@ int exe_parse_cmd( m_exe_options *opt ){
                     }else{
                         str_start = p;
                     }
-                    // }else{
-                    //     if( c == '\\' && c == '\'' || c == '"' ){
-                    //         // TODO
-                    //         return -1;
-                    //     }
-                    //     str_start = p;
-                    // }
                 }else{
                     // error formay
                     return -1;
@@ -324,15 +316,52 @@ GT_PARSE_LOOP_UNDER:
         p++;
     }
 
-    if( tp_opt->argc > 0 && tp_opt->argc == tp_opt->arg_size ){
-        lf_realloc_clear( tp_opt->args
-                , tp_opt->arg_size*sizeof(char**)
-                , ( tp_opt->arg_size+1 )*sizeof(char**) );
-        tp_opt->arg_size ++;
+    if( ( tp_opt->argc > 0 ) &&
+        ( tp_opt->argc == tp_opt->arg_size ) ){
+
+        tp_opt->args = (char**)lf_realloc_clear( (void*)tp_opt->args,
+                tp_opt->arg_size*sizeof(char**),
+                ( tp_opt->arg_size + 1 )*sizeof(char**) );
+
+        tp_opt->args[tp_opt->arg_size] = 0;
+        tp_opt->arg_size++;
     }
 
     tp_opt->executor = tp_opt->args[0];
     return 0;
+}
+
+int exe_set_read_noblock( m_exe_options *opt ){
+    m_inner_options *tp_opt = (m_inner_options*)opt;
+    int set = 1;
+    int r;
+
+    if( opt == NULL ) return -1;
+    do
+        ioctl( tp_opt->fd_stdout[1], FIONBIO, &set );
+    while( r == -1 && errno == EINTR );
+    if( r ) return errno;
+
+    do
+        ioctl( tp_opt->fd_stderr[1], FIONBIO, &set );
+    while( r == -1 && errno == EINTR );
+    if( r ) return errno;
+    return 0;
+}
+
+int exe_read_stdout( m_exe_options *opt, char *rbuf, int rsize  ){
+    m_inner_options *tp_opt = (m_inner_options*)opt;
+    return read( tp_opt->fd_stdout[0], rbuf, rsize );
+}
+
+int exe_read_stderr( m_exe_options *opt, char *rbuf, int rsize  ){
+    m_inner_options *tp_opt = (m_inner_options*)opt;
+    return read( tp_opt->fd_stderr[0], rbuf, rsize );
+}
+
+int exe_write_stdin( m_exe_options *opt, char *wbuf, int wsize  ){
+    m_inner_options *tp_opt = (m_inner_options*)opt;
+    return write( tp_opt->fd_stdin[1], wbuf, wsize );
 }
 
 void exe_show_opts( m_exe_options *opt ){
@@ -362,15 +391,17 @@ void exe_show_opts( m_exe_options *opt ){
             i++;
         }
     }
+    DLLOGV( "DONE!\n" );
 }
 
+// =============================================================================
 static void* lf_realloc_clear( void *p, int origin_size, int expend_size ){
     char *tp = (char*)p;
     tp = (char *)realloc( tp, expend_size );
     if( tp == NULL ){
         return NULL;
     }
-    memset( tp + origin_size, expend_size - origin_size, 0x00 );
+    memset( &tp[ origin_size ], 0x00, expend_size - origin_size );
 
     return (void*)tp;
 }
@@ -380,8 +411,10 @@ static int lf_strndup_args( m_inner_options *opt, bool need_translate,
 
     if( opt->argc == opt->arg_size ){
         int tv_next_space = opt->arg_size*1.75;
+        if( tv_next_space == opt->arg_size )
+            tv_next_space++;
 
-        opt->args =  (char**)lf_realloc_clear( (void*)opt->args
+        opt->args = (char**)lf_realloc_clear( (void*)opt->args
                 , opt->arg_size*sizeof(char**)
                 , tv_next_space*sizeof(char **) );
         if( opt->args == NULL ){
