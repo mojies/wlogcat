@@ -70,22 +70,29 @@ do{\
 #define DLLOGI(x, y...)   DLOGCOMLN( DL_INFO,   CL_LIGHT_BLUE    x CL_NONE, ##y)
 #define DLLOGD(x, y...)   DLOGCOMLN( DL_DEBUG,  CL_LIGHT_CYAN    x CL_NONE, ##y)
 #define DLLOGV(x, y...)   DLOGCOMLN( DL_VERBOSE,CL_LIGHT_GREEN   x CL_NONE, ##y)
+#define DLLOG(x, y...)    DLOGCOMLN( 6, x, ##y)
+
 #define DLOGE(x, y...)   DLOGCOM( DL_ERROR,  CL_LIGHT_RED     x CL_NONE, ##y)
 #define DLOGW(x, y...)   DLOGCOM( DL_WARN,   CL_YELLOW        x CL_NONE, ##y)
 #define DLOGI(x, y...)   DLOGCOM( DL_INFO,   CL_LIGHT_BLUE    x CL_NONE, ##y)
 #define DLOGD(x, y...)   DLOGCOM( DL_DEBUG,  CL_LIGHT_CYAN    x CL_NONE, ##y)
 #define DLOGV(x, y...)   DLOGCOM( DL_VERBOSE,CL_LIGHT_GREEN   x CL_NONE, ##y)
+#define DLOG(x, y...)   DLOGCOM( 6, x, ##y)
+
 #else
 #define DLLOGE(x, y...)   DLOGCOMLN( DL_ERROR,  x, ##y)
 #define DLLOGW(x, y...)   DLOGCOMLN( DL_WARN,   x, ##y)
 #define DLLOGI(x, y...)   DLOGCOMLN( DL_INFO,   x, ##y)
 #define DLLOGD(x, y...)   DLOGCOMLN( DL_DEBUG,  x, ##y)
 #define DLLOGV(x, y...)   DLOGCOMLN( DL_VERBOSE,x, ##y)
+#define DLLOG(x, y...)    DLOGCOMLN( 6, x, ##y)
+
 #define DLOGE(x, y...)   DLOGCOM( DL_ERROR,  x, ##y)
 #define DLOGW(x, y...)   DLOGCOM( DL_WARN,   x, ##y)
 #define DLOGI(x, y...)   DLOGCOM( DL_INFO,   x, ##y)
 #define DLOGD(x, y...)   DLOGCOM( DL_DEBUG,  x, ##y)
 #define DLOGV(x, y...)   DLOGCOM( DL_VERBOSE,x, ##y)
+#define DLOG(x, y...)   DLOGCOM( 6, x, ##y)
 #endif
 
 

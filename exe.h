@@ -13,9 +13,6 @@ typedef struct{
 #define EXE_EXIT    (0x80)
     uint32_t flags;
 
-    // int mstdin;
-    // int mstdout;
-    // int mstderr;
     pid_t pid;
 } m_exe_options;
 
@@ -36,6 +33,8 @@ extern int exe_write_stdin( m_exe_options *opt, char *wbuf, int wsize  );
 
 extern int exe_parse_cmd( m_exe_options *opt );
 extern void exe_show_opts( m_exe_options *opt );
+
+extern int exe_run_and_get_stdout( const char *cmd, char **stdo );
 
 #endif // __EXE_H
 

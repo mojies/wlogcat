@@ -12,7 +12,7 @@ extern "C"{
 typedef union {
     int         aint;
     float       afloat;
-    char       *astr;
+    const char *astr;
     unsigned    auint;
     unsigned    abool;
 }u_udata;

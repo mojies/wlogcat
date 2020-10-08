@@ -17,9 +17,6 @@ typedef struct{
 
     uint32_t flags;
 
-    // int mstdin;
-    // int mstdout;
-    // int mstderr;
     pid_t pid;
 
     char *executor;
@@ -41,9 +38,6 @@ static int lf_strndup_args( m_inner_options *opt, bool need_translate,
 
 m_exe_options *exe_alloc( void ){
     m_inner_options *p = (m_inner_options*)calloc( sizeof( m_inner_options ), 1 );
-    // p->mstdin = -1;
-    // p->mstdout = -1;
-    // p->mstderr = -1;
 
     return (m_exe_options*)p;
 }
@@ -126,11 +120,9 @@ int exe_run( m_exe_options *iopt ){
             close( tp_opt->fd_stderr[0] );
             dup2( tp_opt->fd_stderr[1], 2 );
         }else{
-            if( tv_null_in == -1 ){
-                tv_null_in = open( "/dev/null", O_RDWR );
-                if( tv_null_in < 0 ){
-                    exit( -1 );
-                }
+            tv_null_in = open( "/dev/null", O_RDWR );
+            if( tv_null_in < 0 ){
+                exit( -1 );
             }
             dup2( tv_null_in, 2 );
         }
@@ -143,15 +135,12 @@ int exe_run( m_exe_options *iopt ){
 
     if( tp_opt->flags & EXE_STDIN ){
         close( tp_opt->fd_stdin[0] );
-        // tp_opt->mstdin = tp_opt->fd_stdin[1];
     }
     if( tp_opt->flags & EXE_STDOUT ){
         close( tp_opt->fd_stdout[1] );
-        // tp_opt->mstdout = tp_opt->fd_stdout[0];
     }
     if( tp_opt->flags & EXE_STDERR ){
         close( tp_opt->fd_stderr[1] );
-        // tp_opt->mstderr = tp_opt->fd_stderr[0];
     }
     return 0;
 }
@@ -392,6 +381,59 @@ void exe_show_opts( m_exe_options *opt ){
         }
     }
     DLLOGV( "DONE!\n" );
+}
+
+int exe_run_and_get_stdout( const char *cmd, char **stdo ){
+    m_exe_options  *tp_opt = exe_alloc();
+    char           *tp_stdout = NULL;
+    int             tv_stdout_size = 0;
+    int             tv_stdout_space = 0;
+    int             tv_out_len = 0;
+
+    tp_opt->cmd = cmd;
+    tp_opt->flags = EXE_STDOUT;
+    exe_parse_cmd( tp_opt );
+    // exe_show_opts( tp_opt );
+    exe_run( tp_opt );
+    do{
+        char            tv_wbuf[4096];
+        if( exe_isrunning( tp_opt ) ){
+            // DLLOGD( "errno: %s", strerror( errno ) );
+            break;
+        }
+
+        int rlen = exe_read_stdout( tp_opt, tv_wbuf,
+                sizeof tv_wbuf - 1 );
+
+        if( rlen > 0 ){
+            if( ( rlen + tv_stdout_size ) >= tv_stdout_space ){
+                // resize
+                int resize = ( tv_stdout_space == 0)?2048:( tv_stdout_space*2 );
+                tp_stdout = (char *)realloc( tp_stdout, resize );
+
+                if( tp_stdout == NULL ) goto run_err;
+                tv_stdout_space = resize;
+            }
+            memcpy( &tp_stdout[ tv_stdout_size ], tv_wbuf, rlen );
+            tv_stdout_size += rlen;
+        }
+    }while(1);
+
+    if( tp_stdout ){
+        tp_stdout[ tv_stdout_size ] = '\0';
+    }
+
+    exe_alloc_free( tp_opt );
+
+    *stdo = tp_stdout;
+
+    return tv_stdout_size;
+run_err:
+
+    if( tp_stdout ) free( tp_stdout );
+    exe_alloc_free( tp_opt );
+    *stdo = NULL;
+    return -1;
 }
 
 // =============================================================================
